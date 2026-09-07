@@ -55,6 +55,30 @@ const getAllVideos = asyncHandler(async (req, res) => {
       $match: matchStage,
     },
     {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              fullName: 1,
+              username: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: {
+          $first: "$owner",
+        },
+      },
+    },
+    {
       $sort: {
         [sortBy]: sortType === "asc" ? 1 : -1,
       },
@@ -78,8 +102,8 @@ const publishVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Title and description are required");
   }
 
-  const videoFileLocalPath = req.files?.video[0]?.path;
-  const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
+  const videoFileLocalPath = req.files?.videoFile?.[0]?.path;
+  const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
 
   if (!videoFileLocalPath || !thumbnailLocalPath) {
     throw new ApiError(400, "Video file and thumbnail are required");
@@ -94,8 +118,8 @@ const publishVideo = asyncHandler(async (req, res) => {
   }
 
   const video = await Video.create({
-    videoFile: { url: videoFile.url, publicId: videoFile.publicId },
-    thumbnail: { url: thumbnail.url, publicId: thumbnail.publicId },
+    videoFile: { url: videoFile.url, public_id: videoFile.public_id },
+    thumbnail: { url: thumbnail.url, public_id: thumbnail.public_id },
     title,
     description,
     duration: videoFile.duration,
@@ -204,7 +228,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 
     fieldsToUpdate.thumbnail = {
       url: uploadedThumbnail.secure_url,
-      publicId: uploadedThumbnail.public_id,
+      public_id: uploadedThumbnail.public_id,
     };
 
     oldThumbnailPublicId = video.thumbnail?.public_id;

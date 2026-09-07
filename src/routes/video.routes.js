@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  uploadVideo,
+  publishVideo,
   getVideoById,
   getAllVideos,
   updateVideo,
@@ -24,7 +24,7 @@ router.route("/").get(getAllVideos)
     name: "thumbnail",
     maxCount: 1,
   },
-]), uploadVideo);
+]), publishVideo);
 
 router.route("/:videoId").get(getVideoById)
 .patch(upload.single("thumbnail"), updateVideo)
