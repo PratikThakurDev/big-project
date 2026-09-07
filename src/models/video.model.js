@@ -5,14 +5,14 @@ const videoSchema = new Schema(
   {
     videoFile: {
       url: { type: String, required: true },
-      publicId: {
+      public_id: {
         type: String,
         required: true,
       },
     },
     thumbnail: {
       url: { type: String, required: true },
-      publicId: {
+      public_id: {
         type: String,
         required: true,
       },

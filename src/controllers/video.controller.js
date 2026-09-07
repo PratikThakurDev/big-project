@@ -159,20 +159,17 @@ const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const { title, description } = req.body;
 
-  if (!videoId) {
-    throw new ApiError(400, "videoId is required");
-  }
-
-  if (!title && !description) {
-    throw new ApiError(400, "At least one of title or description is required");
-  }
-
-  const fieldsToUpdate = {};
-  if (title) fieldsToUpdate.title = title;
-  if (description) fieldsToUpdate.description = description;
+  const thumbnail = req.file;
 
   if (!mongoose.isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid videoId");
+  }
+
+  if (!title && !description && !thumbnail) {
+    throw new ApiError(
+      400,
+      "At least one of title, description or thumbnail is required"
+    );
   }
 
   const video = await Video.findById(videoId);
@@ -185,6 +182,34 @@ const updateVideo = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You are not authorized to update this video");
   }
 
+  const fieldsToUpdate = {};
+
+  if (title) {
+    fieldsToUpdate.title = title;
+  }
+
+  if (description) {
+    fieldsToUpdate.description = description;
+  }
+
+  let oldThumbnailPublicId;
+
+  if (thumbnail) {
+    const thumbnailLocalPath = thumbnail.path;
+    const uploadedThumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+    if (!uploadedThumbnail) {
+      throw new ApiError(500, "Failed to upload thumbnail");
+    }
+
+    fieldsToUpdate.thumbnail = {
+      url: uploadedThumbnail.secure_url,
+      publicId: uploadedThumbnail.public_id,
+    };
+
+    oldThumbnailPublicId = video.thumbnail?.public_id;
+  }
+
   const updatedVideo = await Video.findByIdAndUpdate(
     videoId,
     {
@@ -192,8 +217,13 @@ const updateVideo = asyncHandler(async (req, res) => {
     },
     {
       new: true,
+      runValidators: true,
     }
   );
+
+  if (oldThumbnailPublicId) {
+    await deleteFromCloudinary(oldThumbnailPublicId);
+  }
 
   return res
     .status(200)
@@ -221,8 +251,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You are not authorized to delete this video");
   }
 
-  await deleteFromCloudinary(video.videoFile.publicId);
-  await deleteFromCloudinary(video.thumbnail.publicId);
+  await deleteFromCloudinary(video.videoFile.public_id);
+  await deleteFromCloudinary(video.thumbnail.public_id);
 
   await Video.findByIdAndDelete(videoId);
 
