@@ -123,7 +123,7 @@ const publishVideo = asyncHandler(async (req, res) => {
     title,
     description,
     duration: videoFile.duration,
-    owner: new mongoose.Types.ObjectId(req.user._id),
+    owner: req.user._id,
   });
 
   return res
@@ -278,7 +278,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
   await deleteFromCloudinary(video.videoFile.public_id);
   await deleteFromCloudinary(video.thumbnail.public_id);
 
-  await Video.findByIdAndDelete(videoId);
+  await video.deleteOne();
 
   return res
     .status(200)
