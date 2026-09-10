@@ -26,11 +26,17 @@ const userSchema = new Schema(
       index: true,
     },
     avatar: {
-      type: String,
-      required: true,
+      url: { type: String, required: true },
+      public_id: {
+        type: String,
+        required: true,
+      },
     },
     coverImage: {
-      type: String,
+      url: { type: String },
+      public_id: {
+        type: String,
+      },
     },
     watchHistory: [
       {
@@ -50,9 +56,8 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", async function () {
-  if (!this.isModified("password")) return ;
+  if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
-  
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {

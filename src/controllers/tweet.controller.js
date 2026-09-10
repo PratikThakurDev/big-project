@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Tweet } from "../models/tweet.model.js";
+import { Like } from "../models/like.model.js";
 import mongoose from "mongoose";
 
 const createTweet = asyncHandler(async (req, res) => {
@@ -116,6 +117,8 @@ const deleteTweet = asyncHandler(async (req, res) => {
   }
 
   await tweet.deleteOne();
+
+  await Like.deleteMany({ tweet: tweetId });
 
   return res
     .status(200)

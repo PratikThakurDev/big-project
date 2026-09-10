@@ -9,17 +9,23 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const getChannelVideos = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
 
-  if(!mongoose.isValidObjectId(channelId)){
-    throw new ApiError(400,"Invalid channelId")
+  if (!mongoose.isValidObjectId(channelId)) {
+    throw new ApiError(400, "Invalid channelId");
   }
 
   const { limit = 10, page = 1 } = req.query;
 
+  const matchStage = {
+    owner: new mongoose.Types.ObjectId(channelId),
+  };
+
+  if (channelId.toString() !== req.user._id.toString()) {
+    matchStage.isPublished = true;
+  }
+
   const videosAggregate = Video.aggregate([
     {
-      $match: {
-        owner: new mongoose.Types.ObjectId(channelId),
-      },
+      $match: matchStage,
     },
     {
       $sort: {

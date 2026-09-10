@@ -12,6 +12,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     {
       $match: {
         likedBy: new mongoose.Types.ObjectId(req.user._id),
+        video: { $exists: true },
       },
     },
     {
@@ -63,9 +64,9 @@ const getLikedVideos = asyncHandler(async (req, res) => {
   ]);
 
   return res
-    .status(201)
+    .status(200)
     .json(
-      new ApiResponse(201, likedVideos, "Successfully fetched all liked videos")
+      new ApiResponse(200, likedVideos, "Successfully fetched all liked videos")
     );
 });
 

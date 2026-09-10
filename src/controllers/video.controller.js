@@ -6,6 +6,10 @@ import {
   deleteFromCloudinary,
 } from "../utils/cloudinary.js";
 import { Video } from "../models/video.model.js";
+import { User } from "../models/user.model.js";
+import { Comment } from "../models/comment.model.js";
+import { Like } from "../models/like.model.js";
+import { Playlist } from "../models/playlist.model.js";
 import mongoose from "mongoose";
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -22,8 +26,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
     query,
     sortBy = "createdAt",
     sortType = "desc",
-    userId,
   } = req.query;
+
+  matchStage.owner = new mongoose.Types.ObjectId(req.user._id);
 
   const matchStage = {};
   if (query) {
@@ -41,13 +46,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
         },
       },
     ];
-  }
-
-  if (userId) {
-    if (!mongoose.isValidObjectId(userId)) {
-      throw new ApiError(400, "Invalid userId");
-    }
-    matchStage.owner = new mongoose.Types.ObjectId(userId);
   }
 
   const videoAggregate = Video.aggregate([
@@ -137,6 +135,23 @@ const getVideoById = asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid videoId");
   }
+  const videoExists = await Video.findById(videoId);
+
+  if (!videoExists) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  await Video.findByIdAndUpdate(videoId, {
+    $inc: {
+      views: 1,
+    },
+  });
+
+  await User.findByIdAndUpdate(req.user._id, {
+    $addToSet: {
+      watchHistory: videoId,
+    },
+  });
 
   const video = await Video.aggregate([
     {
@@ -169,10 +184,6 @@ const getVideoById = asyncHandler(async (req, res) => {
       },
     },
   ]);
-
-  if (!video.length) {
-    throw new ApiError(404, "Video not found");
-  }
 
   return res
     .status(200)
@@ -279,6 +290,30 @@ const deleteVideo = asyncHandler(async (req, res) => {
   await deleteFromCloudinary(video.thumbnail.public_id);
 
   await video.deleteOne();
+
+  await Like.deleteMany({ video: videoId });
+  await Comment.deleteMany({ video: videoId });
+  await Playlist.updateMany(
+    {
+      videos: videoId,
+    },
+    {
+      $pull: {
+        videos: videoId,
+      },
+    }
+  );
+
+  await User.updateMany(
+    {
+      watchHistory: videoId,
+    },
+    {
+      $pull: {
+        watchHistory: videoId,
+      },
+    }
+  );
 
   return res
     .status(200)
