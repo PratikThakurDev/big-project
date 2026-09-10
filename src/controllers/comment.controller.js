@@ -92,11 +92,13 @@ const deleteComment = asyncHandler(async (req, res) => {
 const getVideoComments = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
+  const { limit = 10, page = 1 } = req.query;
+
   if (!mongoose.isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid video id ");
   }
 
-  const comments = await Comment.aggregate([
+  const commentAggregate = Comment.aggregate([
     {
       $match: {
         video: new mongoose.Types.ObjectId(videoId),
@@ -133,9 +135,14 @@ const getVideoComments = asyncHandler(async (req, res) => {
     },
   ]);
 
+  const comments = await Comment.aggregatePaginate(commentAggregate, {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+  });
+
   return res
     .status(200)
     .json(new ApiResponse(200, comments, "Successfully fetched all comments"));
 });
 
-export { addComment, updateComment, deleteComment ,getVideoComments};
+export { addComment, updateComment, deleteComment, getVideoComments };
